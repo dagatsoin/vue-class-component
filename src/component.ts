@@ -18,9 +18,15 @@ export const $internalHooks = [
 ]
 
 export function componentFactory (
-  Component: VueClass,
-  options: ComponentOptions<any> = {}
+    Component: VueClass,
+    options: ComponentOptions<any> = {}
 ): VueClass {
+
+  // Collect static properties
+  const staticProps: Array<{key: string, value: any}> = Object.keys(Component)
+      .filter(key => key.charAt(0) !== "_")
+      .map(key => ({key, value: Component[key]}));
+
   options.name = options.name || (Component as any)._componentTag || (Component as any).name
   // prototype props.
   const proto = Component.prototype
@@ -62,7 +68,13 @@ export function componentFactory (
   // find super
   const superProto = Object.getPrototypeOf(Component.prototype)
   const Super = superProto instanceof Vue
-    ? superProto.constructor as VueClass
-    : Vue
-  return Super.extend(options)
+      ? superProto.constructor as VueClass
+      : Vue
+
+  const NewComponent = Super.extend(options)
+
+  // Re add static properties
+  staticProps.forEach(prop => NewComponent[prop.key] = prop.value)
+
+  return NewComponent
 }
